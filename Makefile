@@ -1,5 +1,5 @@
-Neural: main.cpp
-	g++  main.cpp -o1 -std=c++20 -Wall -Wextra -I"./include" -L"./lib" -lraylib -o Neural 
+Neural: main.cpp Neural.h Visual.h Visual.cpp
+	g++ Visual.cpp main.cpp -o1 -std=c++20 -Wall -Wextra -I"./include" -L"./lib" -lraylib -o Neural 
 
 
 .PHONY: test
