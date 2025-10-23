@@ -1,6 +1,10 @@
 #include "Neural.h"
 #include "Visual.h"
+#include <csignal>
+#include <functional>
 
+
+bool running = true;
 
 int main()
 {
@@ -31,16 +35,19 @@ int main()
 	
 		
 	double learning_rate = 0.001;
-	size_t epoch = 400000;
+	size_t epoch = 4000000;
 	
 	std::vector<size_t> random_item(training_data[0].size());
 	std::generate(random_item.begin(), random_item.end(), [](){static size_t i = 0; return i++;});
 	std::random_device rd;
 	std::mt19937 gen(rd());
+
+	double J_AVG = 0.0;	
 	
+	std::signal(SIGINT, [](int a){running = false;});	
 	
 	//#define VERBOSE
-	for(int i = 1; i <= epoch; i++)
+	for(int i = 1; i <= epoch && running; i++)
 	{
 
 		std::ranges::shuffle(random_item, gen);
@@ -60,13 +67,18 @@ int main()
 			network.train(y_nn,training_data[1][random_item[k]], learning_rate);
 			#endif
 
+			J_AVG += network.currentCost();
+
 		}
-		std::cout<<"\repoch ["<<i<<"/"<<epoch<<"  "<<std::fixed<<std::setprecision(0)<<(double(i*100)/double(epoch))<<" %]  error = "<<std::setprecision(10)<<network.currentCost()<<std::flush;
-		if(i % 1000 == 0)
+		std::cout<<"\repoch ["<<i<<"/"<<epoch<<"  "<<std::fixed<<std::setprecision(0)<<(double(i*100)/double(epoch))<<" %]  error = "<<std::setprecision(10)<<J_AVG<<std::flush;
+		if(i % 100 == 0)
 		{
-			visualizer.drawErrorCurve(network.currentCost());
+			J_AVG/=training_data.size()*100;
+			visualizer.drawErrorCurve(J_AVG);
+			J_AVG = 0.0;
 		}
 	}
+		
 	std::cout<<"\nFinal network: \n\n\n"<<std::setprecision(6);
 	
 	network.print();
@@ -79,17 +91,18 @@ int main()
 	{
 		std::cout<<"---------------------------------\n";
 		vector input = training_data[0][i];
-		std::cout<<"Input: \n";
+		std::cout<<"Input: ";
 		printVector(input);
-		std::cout<<"Expected: \n";
+		std::cout<<"  Expected: ";
 		printVector(training_data[1][i]);
-		std::cout<<"Prediction: \n";
+		std::cout<<"  Prediction: ";
 		vector output = network.feed(input);
 		printVector(output);	
-		std::cout<<"Error = "<<network.calcCost(output, training_data[1][i])<<"\n";
+		std::cout<<"  Error = "<<network.calcCost(output, training_data[1][i])<<"\n";
 	}
-	
-	
+
+
+
 	return 0;
 
 }

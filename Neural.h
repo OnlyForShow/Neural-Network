@@ -99,7 +99,7 @@ void printVector(const vector& vec)
 	{	
 		std::cout<<vec[m]<<", ";
 	}
-	std::cout<<" ]\n";
+	std::cout<<" ]";
 }
 
 
@@ -362,6 +362,7 @@ struct Layer
 				layers[i].printWeights();
 				std::cout<<"Bias_"<<(i+1)<<" : \n";
 				layers[i].printBias();
+				std::cout<<"\n";
 			}
 		}
 

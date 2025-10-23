@@ -1,2 +1,5 @@
 build/
+cmake_build/
+tags
+*.swp
 
