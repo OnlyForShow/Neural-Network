@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(Neural 
 		main.cpp
 		Visual.cpp
+		Neural.cpp
 		)
 
 target_link_directories(Neural PRIVATE

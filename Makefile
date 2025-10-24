@@ -1,6 +1,6 @@
-Neural: main.cpp Neural.h Visual.h Visual.cpp
+Neural: main.cpp Neural.h Neural.cpp Visual.h Visual.cpp
 	mkdir -p build
-	g++ Visual.cpp main.cpp -o1 -std=c++20 -Wall -Wextra -I"./include" -L"./lib" -lraylib -o build/Neural 
+	g++ Visual.cpp Neural.cpp main.cpp  -o1 -std=c++20 -Wall -Wextra -I"./include" -L"./lib" -lraylib -o build/Neural 
 
 
 .PHONY: test

@@ -1,24 +1,31 @@
 #include "Visual.h"
+#include <sstream>
+#include <iomanip>
+#include <functional>
+#include <iostream>
 
 
-
-
-void Visual::setup(int width, int height, const char * title)
+Visual::Visual(int width, int height, const char * title, NN& neural)
+: network(neural)
 {
-	WINDOW_HEIGHT = height;
-	WINDOW_WIDTH = width;
-	screenWidth = WINDOW_WIDTH;
-	screenHeight= WINDOW_HEIGHT;
-	
+	screenWidth = width;
+	screenHeight= height;
+
+		
+	plot_window = {0.0, 0.0, screenWidth * 0.5, screenHeight * 0.5};
+
+	network_window = {0.0,screenHeight * 0.5, screenWidth, screenHeight * 0.5};
+
+	test_window = {screenWidth * 0.5, 0.0, screenWidth * 0.5, screenHeight * 0.5};
 
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
 	InitWindow(screenWidth, screenHeight, title);
 	
 
 	SetTargetFPS(120);
+		
 	
-	
-	drawingArea = {10, 40 , WINDOW_WIDTH-15, WINDOW_HEIGHT-10};
+	drawingArea = {plot_window.x + x_achse_abstand, plot_window.y + y_achse_abstand+30 , plot_window.width-15, plot_window.height-10};
 
 }	
 
@@ -31,14 +38,24 @@ void Visual::reset()
 	
 void Visual::drawCoordinateSystem()
 {
-	int x_achse_abstand = 10;		
-	int y_achse_abstand = 10;		
-	
-	DrawLineEx({x_achse_abstand, y_achse_abstand}, {x_achse_abstand, WINDOW_HEIGHT - y_achse_abstand},2.0 ,BLACK); 
-	DrawLineEx({x_achse_abstand, WINDOW_HEIGHT - y_achse_abstand}, {WINDOW_WIDTH - x_achse_abstand , WINDOW_HEIGHT - y_achse_abstand }, 2.0 ,BLACK); 
-	DrawTriangle({x_achse_abstand, y_achse_abstand - 5}, {x_achse_abstand - 7, y_achse_abstand + 20} ,{x_achse_abstand+7, y_achse_abstand + 20}, BLACK);
-	DrawTriangle({WINDOW_WIDTH - x_achse_abstand + 5, WINDOW_HEIGHT - y_achse_abstand }, {WINDOW_WIDTH - x_achse_abstand - 20 , WINDOW_HEIGHT - y_achse_abstand - 7 },{WINDOW_WIDTH - x_achse_abstand -20 , WINDOW_HEIGHT - y_achse_abstand +7}, BLACK );
 
+	DrawLineEx({x_achse_abstand, y_achse_abstand}, {x_achse_abstand, plot_window.height - y_achse_abstand},2.0 ,BLACK); 
+	DrawLineEx({x_achse_abstand, plot_window.height - y_achse_abstand}, {plot_window.width - x_achse_abstand , plot_window.height - y_achse_abstand }, 2.0 ,BLACK); 
+	DrawTriangle({x_achse_abstand, y_achse_abstand - 5}, {x_achse_abstand - 7, y_achse_abstand + 20} ,{x_achse_abstand+7, y_achse_abstand + 20}, BLACK);
+	DrawTriangle({plot_window.width - x_achse_abstand + 5, plot_window.height - y_achse_abstand }, {plot_window.width - x_achse_abstand - 20 , plot_window.height - y_achse_abstand - 7 },{plot_window.width - x_achse_abstand -20 , plot_window.height - y_achse_abstand +7}, BLACK );
+
+	int abstand = 8;
+	for(int i = 0; i < abstand; i++) 		
+	{
+		int y = drawingArea.y + (drawingArea.height - drawingArea.y)*(double(i)/double(abstand));
+
+		
+		std::stringstream stream; 
+		stream<<std::fixed<<(max_cost/double(i+1)) << std::endl;
+		DrawText(stream.str().c_str(),15,y,15,WHITE);
+
+		DrawLineEx({x_achse_abstand - 4, y},{x_achse_abstand + 4,y} , 2.0,BLACK);	
+	}
 }
 
 Vector2 Visual::scale(double value, size_t position, size_t max_pos)
@@ -77,14 +94,26 @@ void Visual::plotFunction()
 
 
 
+void Visual::draw(double value)
+{
+	drawErrorCurve(value);
+}
+
 void Visual::drawErrorCurve(double value)
 {
 	if(value > max_cost)max_cost=value;
 		
+	static int counter = 0;
+	counter++;
 	error_points.push_back(value);
 	if(error_points.size()>max_element)
 	{
 		error_points.pop_front();
+		if(counter > max_element)
+		{
+			max_cost = error_points.front();;
+			counter = 0;
+		}
 	}	
 
 
@@ -92,14 +121,138 @@ void Visual::drawErrorCurve(double value)
 			
 	ClearBackground(DARKGRAY);
 		
-
+	std::stringstream stream; 
+	stream <<"Avg Error: "<<value<<std::endl;
 
 	drawCoordinateSystem();
 	plotFunction();
 
+	DrawText(stream.str().c_str(),100,50,20,WHITE);
+	drawNetwork();
 
 
 	EndDrawing();	
+
+}
+
+double xPos( size_t max, double x1, double x2, double r, double abstand)
+{
+	double middle = 0.5 * (x2 - x1) + x1;
+	double L = abstand + 2.0 * r;
+	
+	double ret = middle - 0.5 * L * (max - 1);
+
+	return ret;
+
+}
+
+double yPos( size_t max, double y1, double y2, double r, double abstand)
+{
+	double middle = 0.5 * (y2 - y1) + y1;
+	double L = abstand + 2.0 * r;
+	
+	double ret = middle - 0.5 * L * (max - 1);
+
+	return ret;
+
+}
+
+Color BiasColor(double value)
+{
+	Color c1 = BLUE;
+	Color c2 = RED;
+	double t = sigmoid(value*100.0);
+
+	unsigned char red = c1.r + ( c2.r - c1.r) * t;
+	unsigned char green = c1.g + ( c2.g - c1.g) * t;
+	unsigned char blue = c1.b + ( c2.b - c1.b) * t;
+
+	return (Color){red,green,blue,255}; 
 }
 
 
+Color WeightColor(double value)
+{
+	Color c1 = BLUE;
+	Color c2 = RED;
+	double t = sigmoid(value*100.0);
+
+	unsigned char red = c1.r + ( c2.r - c1.r) * t;
+	unsigned char green = c1.g + ( c2.g - c1.g) * t;
+	unsigned char blue = c1.b + ( c2.b - c1.b) * t;
+
+	return (Color){red,green,blue,255}; 
+}
+
+void Visual::drawNetwork()
+{
+	using namespace std::placeholders;	
+	//graphics settings
+	int neuron_radius = 20;
+	int neuron_distance = 40;
+	int layer_distance = 100;
+
+		
+
+	auto y_p = std::bind(yPos,_1,network_window.y, network_window.y + network_window.height, neuron_radius, neuron_distance);
+	auto x_p = std::bind(xPos,_1, network_window.x, network_window.x + network_window.width, neuron_radius, layer_distance);
+
+	double _x1 = x_p(network.getNumberOfLayer() + 1); 
+	double dY = neuron_distance + 2 * neuron_radius;		
+	double dX = layer_distance + 2 * neuron_radius;		
+	double _x2 = _x1 + dX; 
+
+	BeginDrawing();
+
+	
+	for(int i = 0; i < network.getNumberOfLayer(); i++)
+	{
+		size_t input = network.getLayer(i).input_parameter;
+		size_t output = network.getLayer(i).output_parameter;
+		matrix &weight = network.getLayer(i).getWeights();
+		double y1 = y_p(input); 
+		double x1 = _x1 + dX * i; 
+		double y2 = y_p(output); 
+		double x2 = _x2 + dX * i; 
+
+
+		for(int j = 0; j < input; j++) 
+		{
+			for(int k = 0; k < output; k++) 
+			{
+				DrawLineEx({x1,y1 + dY * j},{x2, y2 + dY * k}, 5.0, WeightColor(weight[k][j]));	
+			}
+		}
+	}
+
+	size_t input = network.getLayer(0).input_parameter;
+	double y1 = y_p(input);
+	for(int j = 0; j < input; j++)
+	{
+		DrawCircle(_x1, y1 + dY * j, neuron_radius, BLACK);
+		
+	}
+
+
+	for(int i = 0; i < network.getNumberOfLayer(); i++)	
+	{
+		size_t output = network.getLayer(i).output_parameter;
+		vector bias = network.getLayer(i).getBias();
+		double y2 = y_p(output); 
+		double x2 = _x2 + dX * i; 
+
+		for(int k = 0; k < output; k++)
+		{
+			DrawCircle(x2, y2 + dY * k, neuron_radius, BiasColor(bias[k]));
+		}
+	}	
+	EndDrawing();
+}
+
+void Visual::drawPointSelection()
+{
+	BeginDrawing();
+
+	EndDrawing();
+
+}

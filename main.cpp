@@ -2,6 +2,10 @@
 #include "Visual.h"
 #include <csignal>
 #include <functional>
+#include <iostream>
+#include <iomanip>
+#include <random>
+#include <algorithm>
 
 
 bool running = true;
@@ -9,24 +13,21 @@ bool running = true;
 int main()
 {
 
-	Visual visualizer;	
 
-	visualizer.setup(1000,800,"Neural Visualizer");
+	NN network;
 
-
+	Visual visualizer(1000,800,"Neural Visualizer", network);
+	
+	
 	size_t training_size = 100;
 	training_set training_data = generateTrainingData(training_size);		
 		
 	printTraining(training_data);
 	
-	NN network;
 
 	network.setInput(1);
 	
-	network.setLayer(8,1,tanh, d_tanh);
-	network.setLayer(16,8,ReLu, d_ReLu);
-	network.setLayer(8,16,sigmoid, d_sigmoid);
-	network.setLayer(1,8, ident, d_ident);
+	network.setLayer(1,1, ident, d_ident);
 	
 	network.setOutput(1);
 	
@@ -34,8 +35,8 @@ int main()
 	
 	
 		
-	double learning_rate = 0.001;
-	size_t epoch = 4000000;
+	double learning_rate = 0.0001;
+	size_t epoch = 400000;
 	
 	std::vector<size_t> random_item(training_data[0].size());
 	std::generate(random_item.begin(), random_item.end(), [](){static size_t i = 0; return i++;});
@@ -68,13 +69,14 @@ int main()
 			#endif
 
 			J_AVG += network.currentCost();
-
 		}
-		std::cout<<"\repoch ["<<i<<"/"<<epoch<<"  "<<std::fixed<<std::setprecision(0)<<(double(i*100)/double(epoch))<<" %]  error = "<<std::setprecision(10)<<J_AVG<<std::flush;
+
+		std::cout<<"\repoch ["<<i<<"/"<<epoch<<"  "<<std::fixed<<std::setprecision(0)<<(double(i*100)/double(epoch))<<" %]  error = "<<std::setprecision(10)<<J_AVG/(training_data.size())<<std::flush;
 		if(i % 100 == 0)
 		{
-			J_AVG/=training_data.size()*100;
-			visualizer.drawErrorCurve(J_AVG);
+			J_AVG/=(training_data.size()*100.0);
+			visualizer.draw(J_AVG);
+
 			J_AVG = 0.0;
 		}
 	}
