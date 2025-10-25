@@ -55,7 +55,7 @@ int main()
 	{
 
 		std::ranges::shuffle(random_item, gen);
-		for(int k = 0; k < training_data.size(); k++)
+		for(int k = 0; k < training_data[0].size(); k++)
 		{
 			#ifdef VERBOSE
 			std::cout<<"\r-------------------------------------------\n";
