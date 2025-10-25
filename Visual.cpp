@@ -53,7 +53,7 @@ void Visual::drawCoordinateSystem()
 
 		
 		std::stringstream stream; 
-		stream<<std::fixed<<(max_cost/double(i+1)) << std::endl;
+		stream<<std::fixed<<(max_cost - max_cost/double(abstand) * i) << std::endl;
 		DrawText(stream.str().c_str(),15,y,15,WHITE);
 
 		DrawLineEx({x_achse_abstand - 4, y},{x_achse_abstand + 4,y} , 2.0,BLACK);	
