@@ -418,3 +418,30 @@ void NN::train(const vector& y_nn, const vector& y, double learning_rate)
 
 }
 
+void NN::reset()
+{
+	for(auto layer = layers.begin(); layer != layers.end(); layer++)	
+	{
+		layer->reset();
+	}
+}
+
+void Layer::reset()
+{
+	for(size_t i = 0; i < output_parameter; i++)
+	{
+		for(size_t j = 0; j < input_parameter; j++)
+		{
+			weight_matrix[i][j] = NormalRandomDouble(0,2.0/input_parameter);	
+		}
+	}
+	
+	bias = vector(output_parameter,0.0);
+	for(size_t i = 0; i < output_parameter; i++)
+	{
+		bias[i] = 0.0;
+	}
+			
+
+}
+

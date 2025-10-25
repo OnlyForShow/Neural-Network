@@ -64,6 +64,7 @@ struct Layer
 		vector reverse(const vector& input);
 		
 		void train(const matrix& weightUpdate, const vector& biasUpdate, double learning_rate);
+
 		
 		matrix& getWeights()
 		{
@@ -84,6 +85,8 @@ struct Layer
 		{
 			printVector(bias);
 		}
+
+		void reset();
 	};
 
 	struct NN
@@ -112,6 +115,8 @@ struct Layer
 		double currentCost();
 
 		void train(const vector& y_nn, const vector& y, double learning_rate);
+
+		void reset();
 			
 	};
 

@@ -31,11 +31,21 @@ Visual::Visual(int width, int height, const char * title, NN& neural)
 }	
 
 
+void Visual::soft_reset()
+{
+	error_points.clear();
+	max_cost = 0.0;
+	network.reset();	
+	currentState = State::RESET;
+}
+
 void Visual::reset()
 {
 	error_points.clear();
 	test_points.clear();
 	max_cost = 0.0;
+	network.reset();	
+	currentState = State::RESET;
 }
 	
 void Visual::drawCoordinateSystem()
@@ -96,30 +106,22 @@ void Visual::plotFunction()
 
 
 
-void Visual::draw(double value)
+void Visual::draw()
 {
-	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-	{
-		Vector2 pos = GetMousePosition();
-		test_points.push_back((point){pos.x - test_window.x, pos.y - test_window.y, color_type(0)});
-	}else if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
-	{
-		Vector2 pos = GetMousePosition();
-		
-		test_points.push_back((point){pos.x - test_window.x, pos.y - test_window.y, color_type(1)});
-
-	}
+	
 	BeginDrawing();
-	drawErrorCurve(value);
-	drawNetwork();
-	drawPointSelection();
+		ClearBackground(DARKGRAY);
+		drawErrorCurve();
+		drawNetwork();
+		drawPointSelection();
 	EndDrawing();	
 }
 
-void Visual::drawErrorCurve(double value)
+
+void Visual::push_back(double value)
 {
 	if(value > max_cost)max_cost=value;
-		
+			
 	static int counter = 0;
 	counter++;
 	error_points.push_back(value);
@@ -128,17 +130,21 @@ void Visual::drawErrorCurve(double value)
 		error_points.pop_front();
 		if(counter > max_element)
 		{
-			max_cost = error_points.front();;
+			max_cost = error_points.front();
 			counter = 0;
 		}
 	}	
 
+}
 
+void Visual::drawErrorCurve()
+{
+	
 			
-	ClearBackground(DARKGRAY);
-		
+	if(error_points.empty())return;	
+
 	std::stringstream stream; 
-	stream <<"Avg Error: "<<value<<std::endl;
+	stream <<"Avg Error: "<<error_points.back()<<std::endl;
 
 	drawCoordinateSystem();
 	plotFunction();
@@ -276,21 +282,222 @@ Color getTypeColor(color_type t)
 
 void Visual::drawPointSelection()
 {
-	DrawRectangleRec(test_window, DARKGRAY);	
+	
+	
+	for(int y = 0; y < test_window.height; y+=test_window.height/100)
+	{
+		for(int x = 0; x < test_window.width; x+=test_window.width/100)
+		{
+			vector output = network.feed({x/test_window.width,y/test_window.height});
+			double value = output[0];
+			DrawRectangle(x+test_window.x, 
+				      y+test_window.y, 
+				      test_window.width/100,
+				      test_window.height/100,
+				      (Color){value*255,value*255,value*255,255}
+				      );
+		}
+	}
+
 	for(int i = 0; i < test_points.size(); i++) 
 	{
 		point p = test_points[i];
 		DrawCircle(p.x + test_window.x ,p.y + test_window.y, 8, GRAY);
 		DrawCircle(p.x + test_window.x ,p.y + test_window.y, 5, getTypeColor(p.v));
 	}
-/*	
-	for(int y = 0; y < test_window.height/10; y++)
-	{
-		for(int x = 0; x < test_window.width/10; x++)
-		{
-			DrawRectangle(
-		}
-	}
-*/
+}
 
+
+training_set Visual::selectPoints()
+{
+	while(true)
+	{
+		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+		{
+			Vector2 pos = GetMousePosition();
+			test_points.push_back((point){pos.x - test_window.x, pos.y - test_window.y, color_type(0)});
+		}else if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+		{
+			Vector2 pos = GetMousePosition();
+			
+			test_points.push_back((point){pos.x - test_window.x, pos.y - test_window.y, color_type(1)});
+
+		}
+
+		if(IsKeyPressed(KEY_ENTER))
+		{
+			training_set set;
+			std::vector<vector> input(test_points.size(), vector());
+			std::vector<vector> output(test_points.size(), vector());
+			set.emplace_back(std::move(input));
+			set.emplace_back(std::move(output));
+
+			for(size_t i = 0; i < test_points.size(); i++)
+			{
+				point p_test = test_points[i];
+				set[0][i].push_back(p_test.x/test_window.width);
+				set[0][i].push_back(p_test.y/test_window.height);
+				set[1][i].push_back((double)p_test.v);
+			}
+			return set;
+		}
+		
+
+		BeginDrawing();
+
+			
+			ClearBackground(DARKGRAY);
+			drawErrorCurve();
+			drawNetwork();
+			drawPointSelection();
+
+			int w_width = 400;
+			int w_height = 100;
+			DrawRectangle((screenWidth - w_width)/2 ,
+				      (screenHeight - w_height)/2,
+				      w_width,
+				      w_height,
+				      Fade(BLUE,0.6));
+				      
+			DrawText("Press ENTER to start the training!",
+				 (screenWidth - w_width)/2 + 20,
+				 (screenHeight - w_height)/2 + 40,
+				 20,
+				 Fade(WHITE,0.9)
+				 );
+
+						
+
+		EndDrawing();
+
+	}
+}
+
+
+bool Visual::resetLoop()
+{
+	while(true)
+	{
+		int w_width = 400;
+		int w_height = 100;
+
+		switch(currentState)
+		{
+			
+			case State::RESET:
+				if(IsKeyPressed(KEY_Z))
+				{
+					currentState = State::RESET_NETWORK;
+					break;
+				}
+
+				if(IsKeyPressed(KEY_N))
+				{
+					return false;
+				}
+
+				BeginDrawing();
+					DrawRectangle((screenWidth - w_width)/2 ,
+						      (screenHeight - w_height)/2,
+						      w_width,
+						      w_height,
+						      Fade(BLUE,0.6));
+						      
+					DrawText("Do you want a new run ? (Y/N)",
+						 (screenWidth - w_width)/2 + 50,
+						 (screenHeight - w_height)/2 + 40,
+						 20,
+						 Fade(WHITE,0.9)
+						 );
+
+				EndDrawing();
+				break;
+			case State::RESET_NETWORK:
+				if(IsKeyPressed(KEY_K))
+				{
+					soft_reset();
+					return true;
+				}
+
+				if(IsKeyPressed(KEY_D))
+				{
+					currentState = State::RESET_ALL;
+					break;
+				}
+
+
+
+				BeginDrawing();
+					DrawRectangle((screenWidth - w_width)/2 ,
+						      (screenHeight - w_height)/2,
+						      w_width,
+						      w_height,
+						      Fade(BLUE,0.6));
+						      
+					DrawText("Do you want to (K)eep the ",
+						 (screenWidth - w_width)/2 + 50,
+						 (screenHeight - w_height)/2 + 40,
+						 20,
+						 Fade(WHITE,0.9)
+						 );
+					DrawText("data points or (D)iscard them? (K/D)",
+						 (screenWidth - w_width)/2 + 50,
+						 (screenHeight - w_height)/2 + 70,
+						 20,
+						 Fade(WHITE,0.9)
+						 );
+
+
+				EndDrawing();
+				break;
+			case State::RESET_ALL:
+				if(IsKeyPressed(KEY_E))
+				{
+					reset();
+					return true;
+				}
+
+				if(IsKeyPressed(KEY_Q))
+				{
+					return false;
+				}
+
+
+
+				BeginDrawing();
+					DrawRectangle((screenWidth - w_width)/2 ,
+						      (screenHeight - w_height)/2,
+						      w_width,
+						      w_height,
+						      Fade(BLUE,0.6));
+						      
+					DrawText("Do you want to reset",
+						 (screenWidth - w_width)/2 + 50,
+						 (screenHeight - w_height)/2 + 40,
+						 20,
+						 Fade(WHITE,0.9)
+						 );
+					DrawText("(E)verthing or (Q)uit ? (E/Q)",
+						 (screenWidth - w_width)/2 + 50,
+						 (screenHeight - w_height)/2 + 70,
+						 20,
+						 Fade(WHITE,0.9)
+						 );
+				EndDrawing();
+				break;
+		}
+			
+	}
+}
+
+bool Visual::state()
+{
+	switch(currentState)
+	{
+		case State::INIT:
+			currentState = State::RESET;
+			return true;
+		case State::RESET:
+			return resetLoop();	
+	}
 }
