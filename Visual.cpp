@@ -27,12 +27,14 @@ Visual::Visual(int width, int height, const char * title, NN& neural)
 	
 	drawingArea = {plot_window.x + x_achse_abstand, plot_window.y + y_achse_abstand+30 , plot_window.width-15, plot_window.height-10};
 
+
 }	
 
 
 void Visual::reset()
 {
 	error_points.clear();
+	test_points.clear();
 	max_cost = 0.0;
 }
 	
@@ -96,7 +98,22 @@ void Visual::plotFunction()
 
 void Visual::draw(double value)
 {
+	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+	{
+		Vector2 pos = GetMousePosition();
+		test_points.push_back((point){pos.x - test_window.x, pos.y - test_window.y, color_type(0)});
+	}else if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+	{
+		Vector2 pos = GetMousePosition();
+		
+		test_points.push_back((point){pos.x - test_window.x, pos.y - test_window.y, color_type(1)});
+
+	}
+	BeginDrawing();
 	drawErrorCurve(value);
+	drawNetwork();
+	drawPointSelection();
+	EndDrawing();	
 }
 
 void Visual::drawErrorCurve(double value)
@@ -117,7 +134,6 @@ void Visual::drawErrorCurve(double value)
 	}	
 
 
-	BeginDrawing();
 			
 	ClearBackground(DARKGRAY);
 		
@@ -128,10 +144,8 @@ void Visual::drawErrorCurve(double value)
 	plotFunction();
 
 	DrawText(stream.str().c_str(),100,50,20,WHITE);
-	drawNetwork();
 
 
-	EndDrawing();	
 
 }
 
@@ -188,8 +202,8 @@ void Visual::drawNetwork()
 {
 	using namespace std::placeholders;	
 	//graphics settings
-	int neuron_radius = 20;
-	int neuron_distance = 40;
+	int neuron_radius = 10;
+	int neuron_distance = 10;
 	int layer_distance = 100;
 
 		
@@ -201,8 +215,6 @@ void Visual::drawNetwork()
 	double dY = neuron_distance + 2 * neuron_radius;		
 	double dX = layer_distance + 2 * neuron_radius;		
 	double _x2 = _x1 + dX; 
-
-	BeginDrawing();
 
 	
 	for(int i = 0; i < network.getNumberOfLayer(); i++)
@@ -220,7 +232,7 @@ void Visual::drawNetwork()
 		{
 			for(int k = 0; k < output; k++) 
 			{
-				DrawLineEx({x1,y1 + dY * j},{x2, y2 + dY * k}, 5.0, WeightColor(weight[k][j]));	
+				DrawLineEx({x1,y1 + dY * j},{x2, y2 + dY * k}, 3.0, WeightColor(weight[k][j]));	
 			}
 		}
 	}
@@ -246,13 +258,39 @@ void Visual::drawNetwork()
 			DrawCircle(x2, y2 + dY * k, neuron_radius, BiasColor(bias[k]));
 		}
 	}	
-	EndDrawing();
 }
+
+
+Color getTypeColor(color_type t)
+{
+	switch(t)
+	{
+		case color_type::black:
+			return BLACK;
+		case color_type::white:
+			return WHITE;
+	}
+	return WHITE;
+}
+
 
 void Visual::drawPointSelection()
 {
-	BeginDrawing();
-
-	EndDrawing();
+	DrawRectangleRec(test_window, DARKGRAY);	
+	for(int i = 0; i < test_points.size(); i++) 
+	{
+		point p = test_points[i];
+		DrawCircle(p.x + test_window.x ,p.y + test_window.y, 8, GRAY);
+		DrawCircle(p.x + test_window.x ,p.y + test_window.y, 5, getTypeColor(p.v));
+	}
+/*	
+	for(int y = 0; y < test_window.height/10; y++)
+	{
+		for(int x = 0; x < test_window.width/10; x++)
+		{
+			DrawRectangle(
+		}
+	}
+*/
 
 }

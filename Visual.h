@@ -6,10 +6,16 @@
 #include "raylib.h"
 #include "Neural.h"
 
+enum color_type
+{
+	black,white
+};
+
 
 struct point
 {
 	double x,y;	
+	color_type v;	
 };
 
 

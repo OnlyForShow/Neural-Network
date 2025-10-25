@@ -27,7 +27,10 @@ int main()
 
 	network.setInput(1);
 	
-	network.setLayer(1,1, ident, d_ident);
+	network.setLayer(10,1, tanh, d_tanh);
+	network.setLayer(10,10, ReLu, d_ReLu);
+	network.setLayer(10,10, sigmoid, d_sigmoid);
+	network.setLayer(1,10, tanh, d_tanh);
 	
 	network.setOutput(1);
 	
@@ -35,7 +38,7 @@ int main()
 	
 	
 		
-	double learning_rate = 0.0001;
+	double learning_rate = 0.01;
 	size_t epoch = 400000;
 	
 	std::vector<size_t> random_item(training_data[0].size());

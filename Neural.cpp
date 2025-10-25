@@ -29,7 +29,7 @@ double NormalRandomDouble(double mean, double stddev)
 double f(double x)
 {
 	//the neural network should learn this function
-	return 2.0*x-7.69;
+	return cos(x);
 }
 
 double g(double min, double max)
